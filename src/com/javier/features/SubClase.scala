@@ -28,26 +28,44 @@ object FeaturesA {
 
   def main(args: Array[String]) {
 
-    val opt = Seq("findJoins", "metaFeatures")
-
-//    if (args.length == 0) {
-//      println("\n  I need one parameter within the following options: "+opt)
-//      System.exit(0)
-//    }
+    val opt = Seq("oneJoin","multipleJoins", "metaFeatures")
+    if (args.length == 0) {
+      println("\n dude, i need one parameter within the following options: "+opt)
+      System.exit(0)
+    }
 
     val spark = SparkSession.builder.appName("SparkSQL")
       .master("local[*]")
-//      .config("spark.driver.host","127.0.0.1")
-      .config("spark.driver.bindAddress","127.0.0.1")
+      //    .config("spark.driver.bindAddress",21376)
       .getOrCreate()
 
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
-//    import spark.implicits._
+    import spark.implicits._
 
-    "findJoins" match{
+    args(0) match{
+      case "oneJoin" =>
+        val df1 = spark.read.option("header", "true").schema(schema1).csv("./resources/testJoin1.csv")
+        df1.show
+        val df2 = spark.read.option("header", "true").schema(schema2).csv("./resources/testJoin2.csv")
+        df2.show
 
-      case "findJoins" =>
+        df1.findJoins(df2).show()
+
+//        result:
+//        +---+----+----+---+--------+-----------+
+//        | id|edad|sexo| id|  nombre|  ocupacion|
+//        +---+----+----+---+--------+-----------+
+//        |  1|  18|   M|  1|  Javier| estudiante|
+//        |  2|  20|   F|  2|Angelica|programador|
+//        |  3|  18|   M|  3| Edgardo| estudiante|
+//        |  4|  22|   F|  4| Krystel|programador|
+//        |  5|  23|   M|  5| Ernesto| estudiante|
+//        +---+----+----+---+--------+-----------+
+
+
+
+      case "multipleJoins" =>
         val df1 = spark.read.option("header", "true").schema(schema1).csv("./resources/testJoin1.csv")
         df1.show
         val df2 = spark.read.option("header", "true").schema(schema2).csv("./resources/testJoin2.csv")
@@ -55,29 +73,49 @@ object FeaturesA {
         val df3 = spark.read.option("header", "true").schema(schema3).csv("./resources/testJoin3.csv")
         df3.show
 
-        val lista = Seq(df2, df3)
-        df1.findJoins(lista)
-//      OUTPUT:
-//        computing metadata for main dataset
-//        computing metadata for dataset 0 in the sequence
-//        computing metadata for dataset 1 in the sequence
-//
-//             DATAFRAMES 				 CANDIDATES ATTRIBUTES 			 JOIN-SCORE
-//        Main DF and DataFrame[0] 	 main.id and DataFrame[0].id 		 0.0
-//        Main DF and DataFrame[0] 	 main.edad and DataFrame[0].nombre 		 0.0
-//        Main DF and DataFrame[0] 	 main.sexo and DataFrame[0].ocupacion 		 0.0
-//        Main DF and DataFrame[1] 	 main.id and DataFrame[1].id 		 0.0
-//        Main DF and DataFrame[1] 	 main.edad and DataFrame[1].nombre 		 0.0
-//        Main DF and DataFrame[1] 	 main.sexo and DataFrame[1].edad 		 0.0
+        val lista = df1.findJoinsFromMultipleDF(df2,df3)
+        lista.map(_.show)
 
-        df1.computeMetaFeatures
+//        result:
+//        +---+----+----+---+--------+-----------+
+//        | id|edad|sexo| id|  nombre|  ocupacion|
+//        +---+----+----+---+--------+-----------+
+//        |  1|  18|   M|  1|  Javier| estudiante|
+//        |  2|  20|   F|  2|Angelica|programador|
+//        |  3|  18|   M|  3| Edgardo| estudiante|
+//        |  4|  22|   F|  4| Krystel|programador|
+//        |  5|  23|   M|  5| Ernesto| estudiante|
+//        +---+----+----+---+--------+-----------+
+//
+//        +---+----+----+---+--------+----+------+
+//        | id|edad|sexo| id|  nombre|edad| color|
+//        +---+----+----+---+--------+----+------+
+//        |  3|  18|   M|  1|  Javier|  18|  rojo|
+//        |  1|  18|   M|  1|  Javier|  18|  rojo|
+//        |  2|  20|   F|  2|Angelica|  20|  azul|
+//        |  3|  18|   M|  3| Edgardo|  18|blanco|
+//        |  1|  18|   M|  3| Edgardo|  18|blanco|
+//        |  4|  22|   F|  4| Krystel|  22|  rojo|
+//        |  5|  23|   M|  5| Ernesto|  23| verde|
+//        +---+----+----+---+--------+----+------+
+//
+//        +---+--------+-----------+---+--------+----+------+
+//        | id|  nombre|  ocupacion| id|  nombre|edad| color|
+//        +---+--------+-----------+---+--------+----+------+
+//        |  1|  Javier| estudiante|  1|  Javier|  18|  rojo|
+//        |  2|Angelica|programador|  2|Angelica|  20|  azul|
+//        |  3| Edgardo| estudiante|  3| Edgardo|  18|blanco|
+//        |  4| Krystel|programador|  4| Krystel|  22|  rojo|
+//        |  5| Ernesto| estudiante|  5| Ernesto|  23| verde|
+//        +---+--------+-----------+---+--------+----+------+
+
 
       case "metaFeatures"  =>
         val test = spark.read.json("./resources/test.json")
         test.createOrReplaceTempView("test")
         val tabl = spark.sql("SELECT l.numeric1, l.numeric2, l.nominal1, l.nominal2 FROM test LATERAL VIEW explode(array) AS l")
         tabl.show()
-        tabl.computeMetaFeatures.show()
+        tabl.metaFeatures.show()
 
 //        Result:
 //
