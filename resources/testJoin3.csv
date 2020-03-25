@@ -1,4 +1,4 @@
-id,nombre,edad,color
+identifier,name,age,color
 1,Javier,18,rojo
 2,Angelica,20,azul
 3,Edgardo,18,blanco

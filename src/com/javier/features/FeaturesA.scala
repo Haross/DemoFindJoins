@@ -1,5 +1,6 @@
 package com.javier.features
 
+import org.apache.spark.SparkContext
 import org.apache.spark.sql._
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
@@ -18,26 +19,24 @@ object FeaturesA {
   ))
 
   lazy val schema3 = StructType(Array(
-    StructField("id", IntegerType, true),
-    StructField("nombre", StringType, true),
-    StructField("edad", IntegerType, true),
+    StructField("identifier", IntegerType, true),
+    StructField("name", StringType, true),
+    StructField("age", IntegerType, true),
     StructField("color", StringType, true)
   ))
-
 
 
   def main(args: Array[String]) {
 
     val opt = Seq("findJoins", "metaFeatures")
 
-//    if (args.length == 0) {
-//      println("\n  I need one parameter within the following options: "+opt)
-//      System.exit(0)
-//    }
+    if (args.length == 0) {
+      println("\n  I need one parameter within the following options: "+opt)
+      System.exit(0)
+    }
 
     val spark = SparkSession.builder.appName("SparkSQL")
       .master("local[*]")
-//      .config("spark.driver.host","127.0.0.1")
       .config("spark.driver.bindAddress","127.0.0.1")
       .getOrCreate()
 
@@ -56,7 +55,8 @@ object FeaturesA {
         df3.show
 
         val lista = Seq(df2, df3)
-        df1.findJoins(lista)
+        df1.findJoins(df2,df3)
+//        df1.findJoins(lista)
 //      OUTPUT:
 //        computing metadata for main dataset
 //        computing metadata for dataset 0 in the sequence
@@ -78,6 +78,7 @@ object FeaturesA {
         val tabl = spark.sql("SELECT l.numeric1, l.numeric2, l.nominal1, l.nominal2 FROM test LATERAL VIEW explode(array) AS l")
         tabl.show()
         tabl.computeMetaFeatures.show()
+//        tabl.showJoinPredicates()
 
 //        Result:
 //
